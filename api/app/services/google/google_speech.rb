@@ -4,14 +4,19 @@ class Google::GoogleSpeech
       file = create_file(file_binary, file_name, file_format)
 
       begin
-        ops = google_speech.long_running_recognize(config: config, audio: audio(file))
-        ops.wait_until_done!
+        response = google_speech.recognize(config: config, audio: audio(file))
       rescue => ex
         raise ex
       end
 
       File.delete(file.path)
-      ops.response.results
+
+      results = response.results
+      alternatives = results.first.alternatives
+      alternative = alternatives.first
+      transcript = alternative.transcript unless alternative.nil?
+ 
+      { transcript: transcript }
     end
 
     def create_file(file_binary, file_name, file_format)
@@ -34,7 +39,7 @@ class Google::GoogleSpeech
       path = file.path
       flac_path = "#{file.path.split('.').first}.flac"
 
-      system("ffmpeg -i #{path} #{flac_path}")
+      system("ffmpeg -i #{path} -sample_fmt s16 #{flac_path}")
 
       File.open(flac_path, 'r')
     end
@@ -44,6 +49,8 @@ class Google::GoogleSpeech
         encoding: :FLAC,
         sample_rate_hertz: 48000,
         language_code: 'pt-BR',
+        enable_automatic_punctuation: true,
+        model: 'default',
       }
     end
 
