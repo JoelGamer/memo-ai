@@ -1,0 +1,3 @@
+interface ActiveRecord {
+  id: string;
+}
